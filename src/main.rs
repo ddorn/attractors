@@ -40,6 +40,25 @@ impl Camera {
 }
 
 
+struct RecursiveSequence<F>
+    where F: Fn(RPoint) -> RPoint {
+    f: F,
+    start: RPoint
+}
+
+impl<F> Iterator for RecursiveSequence<F>
+    where F: Fn(RPoint) -> RPoint {
+
+    type Item = RPoint;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.start = (self.f)(self.start);
+
+        Some(self.start)
+    }
+}
+
+
 fn print_ppm(image : Vec<Color>, size : (usize, usize)) {
     assert_eq!(image.len(), size.0 * size.1);
 
@@ -96,42 +115,34 @@ fn gradient(colors : Vec<Color>) -> [Color; 256]{
 
 
 fn main() {
-    let screen_size  = (1080, 1080);
-    let mut camera = Camera {
+    let screen_size  = (1080, 1080);    // We want the full picture inside the image
+
+    let a = -1.8;
+    let b = 3.8;
+    let c = 0.7;
+    let d = -0.9;
+    let nb_points = 20_000_000;
+    let f = |(x, y)|
+        (f64::sin(a * x) + c * f64::sin(a * y),
+         f64::sin(b * y) + d * f64::sin(b * x));
+
+    let camera = Camera {
         center: (0.0, 0.0),
-        height: 5.0,
+        height: 3.0 + 2.0*c, // We want the full picture inside the image
         screen_size: screen_size,
     };
 
-    // generate points
-    let nb_points = 20000000;
-    let mut points = Vec::with_capacity(nb_points);
-
-    let a = -1.5;
-    let b = 2.1;
-    let c = 1.1;
-    let d = -0.8;
-
-    let mut point : RPoint = (1.0, 1.0);
-    for _ in 0..nb_points {
-        point = (
-            f64::sin(a*point.0) + c * f64::sin(a*point.1),
-            f64::sin(b*point.1) + d * f64::sin(b*point.0)
-        );
-        points.push(point);
-    };
-
-    camera.height = 2.0 * points.iter()
-        .map(|(_, b)| *b)
-        .fold(-1.0/0.0 /*-inf*/, f64::max) + 2.0;
-
-    // generate image from points
+    // Generate the sequence
+    let mut rseq = RecursiveSequence { f: f, start: (1.0, 1.0) };
     let mut data: Vec<usize> = vec![0; screen_size.0 * screen_size.1];
-    for rpoint in points {
-        let coord = camera.to_screen(rpoint);
-        data[coord.1 * screen_size.0 + coord.0] += 1;
-    }
 
+    rseq.take(nb_points)
+        .map(|p| camera.to_screen(p))
+        .for_each(|(x, y)| {
+            data[y*screen_size.0 + x] += 1
+        });
+
+    // Translate number of points into color
     let grad = gradient(vec![
         (0, 0, 0),
         (58, 145, 112),
@@ -139,12 +150,12 @@ fn main() {
         (232, 171, 46),
         (236, 49, 9),
     ]);
-
     let image = data.iter()
         .map(|&x| x.min(255))
         .map(|x| grad[x])
         .collect::<Vec<(u8, u8, u8)>>();
 
+    // Print the image on stdout
     print_ppm(image, screen_size);
 
 
