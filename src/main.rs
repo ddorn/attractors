@@ -119,9 +119,9 @@ fn main() {
 
     let a = -1.8;
     let b = 3.8;
-    let c = 0.7;
-    let d = -0.9;
-    let nb_points = 20_000_000;
+    let c = 1.2;
+    let d = -0.3;
+    let nb_points = 35_000_000;
     let f = |(x, y)|
         (f64::sin(a * x) + c * f64::sin(a * y),
          f64::sin(b * y) + d * f64::sin(b * x));
@@ -150,9 +150,17 @@ fn main() {
         (232, 171, 46),
         (236, 49, 9),
     ]);
+    let grad2 = gradient(vec![
+        (18, 16, 10),
+        (20, 112, 106),
+        (14, 141, 130),
+        (244, 157, 47),
+        (239, 72, 25),
+    ]);
+
     let image = data.iter()
         .map(|&x| x.min(255))
-        .map(|x| grad[x])
+        .map(|x| grad2[x])
         .collect::<Vec<(u8, u8, u8)>>();
 
     // Print the image on stdout
