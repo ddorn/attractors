@@ -79,7 +79,6 @@ fn print_ppm(image : Vec<Color>, size : (usize, usize)) {
 fn mix(a: Color, b: Color, x: f64) -> Color {
     assert!(0.0 <= x && x <= 1.0);
 
-//    (0..3usize).map(|i| (a[i] as f64 * (1.0 - x) + b[i] as f64 * x) as u8).collect()
     (
         (a.0 as f64 * (1.0 - x) + b.0 as f64 * x) as u8,
         (a.1 as f64 * (1.0 - x) + b.1 as f64 * x) as u8,
@@ -115,25 +114,26 @@ fn gradient(colors : Vec<Color>) -> [Color; 256]{
 
 
 fn main() {
-    let screen_size  = (1080, 1080);    // We want the full picture inside the image
+    let screen_size  = (1366, 780);    // We want the full picture inside the image
 
-    let a = -1.8;
-    let b = 3.8;
-    let c = 1.2;
-    let d = -0.3;
+    let a = 2.3;
+    let b = 1.7;
+    let c = 2.3;
+    let d = -1.3;
+    let e = -2.3;
     let nb_points = 35_000_000;
     let f = |(x, y)|
-        (f64::sin(a * x) + c * f64::sin(a * y),
-         f64::sin(b * y) + d * f64::sin(b * x));
+        (f64::sin(a * x) + c * f64::sin(a * y + e),
+         f64::cos(b * y) + d * f64::sin(b * x));
 
     let camera = Camera {
         center: (0.0, 0.0),
-        height: 3.0 + 2.0*c, // We want the full picture inside the image
-        screen_size: screen_size,
+        height: 1.5 + 2.0*f64::abs(c), // We want the full picture inside the image
+        screen_size,
     };
 
     // Generate the sequence
-    let mut rseq = RecursiveSequence { f: f, start: (1.0, 1.0) };
+    let mut rseq = RecursiveSequence { f, start: (1.0, 1.0) };
     let mut data: Vec<usize> = vec![0; screen_size.0 * screen_size.1];
 
     rseq.take(nb_points)
@@ -144,23 +144,14 @@ fn main() {
 
     // Translate number of points into color
     let grad = gradient(vec![
-        (0, 0, 0),
-        (58, 145, 112),
-        (229, 214, 121),
-        (232, 171, 46),
-        (236, 49, 9),
-    ]);
-    let grad2 = gradient(vec![
-        (18, 16, 10),
-        (20, 112, 106),
-        (14, 141, 130),
-        (244, 157, 47),
-        (239, 72, 25),
+//        (0, 0, 0), (58, 145, 112), (229, 214, 121), (232, 171, 46), (236, 49, 9),
+        (18, 16, 10), (20, 112, 106), (14, 141, 130), (244, 157, 47), (239, 72, 25),
+//        (44, 96, 97),  (56, 161, 87),  (229, 202, 76),  (244, 157, 47),  (243, 119, 77)
     ]);
 
     let image = data.iter()
         .map(|&x| x.min(255))
-        .map(|x| grad2[x])
+        .map(|x| grad[x])
         .collect::<Vec<(u8, u8, u8)>>();
 
     // Print the image on stdout
